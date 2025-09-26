@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Intuition $TRUST Checker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;800&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        /* Custom Styles for the futuristic theme */
+        :root {
+            --bg-color: #0a0a1a;
+            --primary-glow: #ff8c00; /* Orange glow */
+            --secondary-glow: #00d1ff; /* Blue glow */
+            --border-color: #ff8c0044;
+            --text-color: #e0e0e0;
+            --text-muted: #888;
+            --card-bg: #1a1a2e;
+
+            /* Role Colors */
+            --role-oracle: #ff1493;
+            --role-relic-whale: #40e0d0;
+            --role-conscious: #32cd32;
+            --role-illuminated: #adff2f;
+            --role-enlightened: #da70d6;
+            --role-disciple: #87ceeb;
+            --role-traveler: #f5deb3;
+            --role-wanderer: #add8e6;
+            --role-inquirer: #d3d3d3;
+            --role-initiate: #ffb6c1;
+            --role-flamebearer: #ffa500;
+
+            /* Relic Colors */
+            --relic-mystic: linear-gradient(90deg, #ff1493, #ffd700, #00ffff, #9400d3);
+            --relic-ancient: #ffd700;
+            --relic-legendary: linear-gradient(90deg, #ffd700, #ff8c00);
+            --relic-epic: linear-gradient(90deg, #ffb6c1, #c7a2c7);
+            --relic-rare: linear-gradient(90deg, #87cefa, #4682b4); /* Lighter blue gradient */
+            --relic-common: linear-gradient(90deg, #d3d3d3, #ffffff);
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            background-image:
+                radial-gradient(circle at 10% 20%, var(--border-color) 0%, transparent 20%),
+                radial-gradient(circle at 80% 90%, var(--secondary-glow) 0%, transparent 15%);
+        }
+
+        .font-orbitron {
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        .checker-container {
+            border: 1px solid var(--border-color);
+            background-color: var(--card-bg);
+            box-shadow: 0 0 20px var(--primary-glow), 0 0 10px var(--secondary-glow) inset;
+            position: relative;
+            overflow: hidden;
+            border-radius: 1rem;
+        }
+
+        .checker-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: url('data:image/svg+xml;utf8,<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><path d="M1 1h98v98H1z" stroke="%23ff8c00" stroke-width="0.2" fill="none" stroke-opacity="0.1"/></svg>');
+            pointer-events: none;
+        }
+        
+        .custom-frame {
+            border: 1px solid var(--border-color);
+            padding: 2px;
+            border-radius: 0.5rem;
+            box-shadow: 0 0 5px var(--border-color) inset;
+        }
+
+        input, select {
+            background-color: #00000088;
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            transition: all 0.3s ease;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            box-shadow: 0 0 10px var(--primary-glow);
+            border-color: var(--primary-glow);
+        }
+
+        .btn {
+            background-color: var(--primary-glow);
+            color: var(--bg-color);
+            font-weight: bold;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+        }
+
+        .btn:hover {
+            box-shadow: 0 0 15px var(--primary-glow);
+            transform: translateY(-2px);
+        }
+
+        .checkbox-label {
+            color: var(--role-flamebearer);
+            text-shadow: 0 0 5px var(--role-flamebearer);
+        }
+
+        input[type="checkbox"] {
+            appearance: none;
+            width: 1.5rem;
+            height: 1.5rem;
+            border: 2px solid var(--role-flamebearer);
+            border-radius: 4px;
+            cursor: pointer;
+            position: relative;
+            vertical-align: middle;
+        }
+
+        input[type="checkbox"]:checked {
+            background-color: var(--role-flamebearer);
+            box-shadow: 0 0 10px var(--role-flamebearer);
+        }
+        
+        input[type="checkbox"]:checked::after {
+            content: "";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%;
+            height: 80%;
+            background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 16 16' fill='%230a0a1a' xmlns='http://www.w3.org/2000/svg'%3e%3cpath d='M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z'/%3e%3c/svg%3e");
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+
+        .glow-text {
+            text-shadow: 0 0 8px var(--primary-glow), 0 0 12px var(--secondary-glow);
+        }
+        
+        .relic-text-gradient {
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-fill-color: transparent;
+            text-shadow: 1px 1px 2px #00000080;
+        }
+
+        #role-display {
+            transition: color 0.3s ease, text-shadow 0.3s ease;
+        }
+
+        #total-iq, #trust-allocation {
+            font-weight: 800; /* Bolder font for results */
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <div class="checker-container w-full max-w-2xl p-6 md:p-8 space-y-6">
+        
+        <!-- Header -->
+        <div class="text-center">
+            <h1 class="font-orbitron text-2xl md:text-4xl font-extrabold glow-text tracking-widest">
+                $TRUST ALLOCATION CHECKER
+            </h1>
+            <p class="text-sm text-muted">Calculate your estimated TGE allocation.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Left Column: Inputs -->
+            <div class="space-y-4">
+                <div class="custom-frame p-4 space-y-3">
+                    <div>
+                        <label for="evmAddress" class="block text-sm font-medium mb-1">EVM Address</label>
+                        <input type="text" id="evmAddress" class="w-full p-2 rounded-md" placeholder="0x...">
+                    </div>
+                    <div>
+                        <label for="baseIQ" class="block text-sm font-medium mb-1">Base IQ Points</label>
+                        <input type="number" id="baseIQ" class="w-full p-2 rounded-md" placeholder="e.g., 10000" min="0">
+                    </div>
+                </div>
+
+                <div class="custom-frame p-4 space-y-3">
+                    <div>
+                        <label for="discordRole" class="block text-sm font-medium mb-1">Discord Role</label>
+                        <select id="discordRole" class="w-full p-2 rounded-md">
+                            <!-- Options will be populated by JS -->
+                        </select>
+                        <p id="role-display" class="text-xs mt-2 font-bold transition-all duration-300">Selected Role: <span id="role-name">None</span></p>
+                    </div>
+                    <div class="flex items-center space-x-3 pt-2">
+                        <input type="checkbox" id="flamebearer">
+                        <label for="flamebearer" class="font-bold text-lg checkbox-label">Flamebearer</label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Wallet & Relics -->
+            <div class="space-y-4">
+                <div class="custom-frame p-4 space-y-3 h-full flex flex-col">
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-lg font-bold font-orbitron">Relics Multiplier</h2>
+                        <!-- SVG Relic Icon -->
+                        <svg width="40" height="40" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M50 5 L95 45 L95 85 L5 85 L5 45 L50 5Z" stroke="var(--primary-glow)" stroke-width="2" fill="#1a1a2e"/>
+                            <path d="M50 15 L85 45 L85 75 L15 75 L15 45 L50 15Z" stroke="var(--primary-glow)" stroke-width="2" stroke-opacity="0.6"/>
+                            <circle cx="50" cy="55" r="10" stroke="var(--secondary-glow)" stroke-width="2"/>
+                            <path d="M50 55 m -5, 0 a 5,5 0 1,0 10,0 a 5,5 0 1,0 -10,0" fill="var(--secondary-glow)"/>
+                        </svg>
+                    </div>
+                    <button id="connectWalletBtn" class="w-full btn p-2 rounded-md">Connect Wallet</button>
+                    <div id="wallet-status" class="text-center text-sm text-muted mt-2">Connect to check for Relics</div>
+                    <div id="relics-display" class="flex-grow space-y-1 mt-2 overflow-y-auto max-h-40 pr-2">
+                        <!-- Relics will be populated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div class="custom-frame p-6 mt-6 space-y-4">
+            <div class="text-center">
+                <p class="font-orbitron text-sm uppercase text-muted">Total Calculated IQ Points</p>
+                <p id="total-iq" class="text-4xl glow-text">0</p>
+            </div>
+            <hr class="border-t border-dashed border-gray-600">
+            <div class="text-center">
+                <p class="font-orbitron text-sm uppercase text-muted">Estimated $TRUST Allocation</p>
+                <p id="trust-allocation" class="text-3xl" style="color: var(--secondary-glow); text-shadow: 0 0 8px var(--secondary-glow);">0.00</p>
+            </div>
+        </div>
+        
+        <!-- Disclaimer -->
+        <p class="text-sm text-center text-red-500 mt-4 px-4">
+            <strong>Disclaimer:</strong> This is an unofficial, community-made tool for estimation purposes only. The final allocation is determined by the official Intuition TGE process and is subject to change.
+        </p>
+
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- DATA DEFINITIONS ---
+            const roles = {
+                initiate: { name: 'Initiate', multiplier: 1, color: 'var(--role-initiate)' },
+                inquirer: { name: 'Inquirer', multiplier: 1.2, color: 'var(--role-inquirer)' },
+                wanderer: { name: 'Wanderer', multiplier: 1.4, color: 'var(--role-wanderer)' },
+                traveler: { name: 'Traveler', multiplier: 1.6, color: 'var(--role-traveler)' },
+                disciple: { name: 'Disciple', multiplier: 1.8, color: 'var(--role-disciple)' },
+                enlightened: { name: 'Enlightened', multiplier: 2, color: 'var(--role-enlightened)' },
+                illuminated: { name: 'Illuminated', multiplier: 2.2, color: 'var(--role-illuminated)' },
+                conscious: { name: 'Conscious', multiplier: 2.4, color: 'var(--role-conscious)' },
+                'relic-whale': { name: 'Relic Whale', multiplier: 2.6, color: 'var(--role-relic-whale)' },
+                oracle: { name: 'Oracle', multiplier: 3.2, color: 'var(--role-oracle)' },
+            };
+
+            const relics = {
+                common: { name: 'Common', rarityMultiplier: 1.5, weight: 1.1, color: 'var(--relic-common)' },
+                rare: { name: 'Rare', rarityMultiplier: 2, weight: 1.2, color: 'var(--relic-rare)' },
+                epic: { name: 'Epic', rarityMultiplier: 2.5, weight: 1.3, color: 'var(--relic-epic)' },
+                legendary: { name: 'Legendary', rarityMultiplier: 3, weight: 1.4, color: 'var(--relic-legendary)' },
+                ancient: { name: 'Ancient', rarityMultiplier: 3.5, weight: 1.5, color: 'var(--relic-ancient)' },
+                mystic: { name: 'Mystic', rarityMultiplier: 10, weight: 1.0, color: 'var(--relic-mystic)' },
+            };
+
+            // --- STATE MANAGEMENT ---
+            let userWalletState = {
+                connected: false,
+                relics: [], // e.g., [{id: 'common', hasGenesis: false}, {id: 'ancient', hasGenesis: true}]
+            };
+
+            // --- DOM ELEMENTS ---
+            const baseIQInput = document.getElementById('baseIQ');
+            const roleSelect = document.getElementById('discordRole');
+            const flamebearerCheckbox = document.getElementById('flamebearer');
+            const connectWalletBtn = document.getElementById('connectWalletBtn');
+            const relicsDisplay = document.getElementById('relics-display');
+            const totalIqDisplay = document.getElementById('total-iq');
+            const trustAllocationDisplay = document.getElementById('trust-allocation');
+            const roleDisplay = document.getElementById('role-display');
+            const roleNameDisplay = document.getElementById('role-name');
+            const walletStatus = document.getElementById('wallet-status');
+
+
+            // --- INITIALIZATION ---
+            function initialize() {
+                // Populate roles dropdown
+                const roleOptions = Object.entries(roles).reverse().map(([key, value]) => {
+                    return `<option value="${key}">${value.name} (x${value.multiplier})</option>`;
+                });
+                roleSelect.innerHTML = roleOptions.join('');
+
+                // Set up event listeners
+                [baseIQInput, roleSelect, flamebearerCheckbox].forEach(el => {
+                    el.addEventListener('input', calculate);
+                });
+                connectWalletBtn.addEventListener('click', connectWallet);
+                
+                // Initial calculation and UI update
+                updateRoleDisplay();
+                calculate();
+            }
+
+            // --- CORE CALCULATION LOGIC ---
+            function calculate() {
+                // 1. Get Base IQ
+                const baseIQ = parseFloat(baseIQInput.value) || 0;
+
+                // 2. Get Role Multiplier (RM)
+                const selectedRole = roles[roleSelect.value];
+                const roleMultiplier = selectedRole ? selectedRole.multiplier : 1;
+
+                // 3. Get Flamebearer Multiplier (FM)
+                const flamebearerMultiplier = flamebearerCheckbox.checked ? 1.5 : 1;
+
+                // 4. Get Relics Multiplier (RcsM) & Genesis Multiplier (GM)
+                let relicsMultiplier = 1;
+                let genesisMultiplier = 1;
+
+                if (userWalletState.connected && userWalletState.relics.length > 0) {
+                    const heldRelics = userWalletState.relics.map(r => relics[r.id]);
+                    
+                    const maxRarityMultiplier = Math.max(...heldRelics.map(r => r.rarityMultiplier));
+                    const sumOfWeights = heldRelics.reduce((sum, r) => sum + r.weight, 0);
+                    
+                    relicsMultiplier = maxRarityMultiplier * sumOfWeights;
+                    
+                    const hasGenesis = userWalletState.relics.some(r => r.hasGenesis);
+                    if (hasGenesis) {
+                        genesisMultiplier = 1.66;
+                    }
+                }
+                
+                // Final Calculation
+                const totalIQ = baseIQ * roleMultiplier * flamebearerMultiplier * relicsMultiplier * genesisMultiplier;
+                const trustAllocation = totalIQ / 100;
+
+                // Update UI
+                totalIqDisplay.textContent = totalIQ.toLocaleString('en-US', { maximumFractionDigits: 0 });
+                trustAllocationDisplay.textContent = trustAllocation.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                updateRoleDisplay();
+            }
+
+            // --- UI UPDATE FUNCTIONS ---
+            function updateRoleDisplay() {
+                const selectedRoleKey = roleSelect.value;
+                const selectedRole = roles[selectedRoleKey];
+                if (selectedRole) {
+                    roleNameDisplay.textContent = selectedRole.name;
+                    roleDisplay.style.color = selectedRole.color;
+                    roleDisplay.style.textShadow = `0 0 5px ${selectedRole.color}`;
+                }
+            }
+            
+            function updateRelicsDisplay() {
+                if (!userWalletState.connected) {
+                    relicsDisplay.innerHTML = '';
+                    walletStatus.textContent = 'Connect to check for Relics';
+                    return;
+                }
+
+                if (userWalletState.relics.length === 0) {
+                    walletStatus.textContent = 'No Relics found in wallet.';
+                    relicsDisplay.innerHTML = '';
+                    return;
+                }
+                
+                walletStatus.textContent = `${userWalletState.relics.length} Relic(s) found.`;
+                
+                // Group relics by rarity and count them
+                const relicSummary = userWalletState.relics.reduce((acc, relic) => {
+                    if (!acc[relic.id]) {
+                        acc[relic.id] = { count: 0, hasGenesis: false };
+                    }
+                    acc[relic.id].count++;
+                    if (relic.hasGenesis) {
+                        acc[relic.id].hasGenesis = true;
+                    }
+                    return acc;
+                }, {});
+
+                relicsDisplay.innerHTML = Object.entries(relicSummary).map(([id, data]) => {
+                    const relicInfo = relics[id];
+                    const genesisTag = data.hasGenesis ? `<span style="color: var(--primary-glow); font-weight: bold;"> (Genesis)</span>` : '';
+                    return `
+                        <div class="p-1 rounded text-sm">
+                            <span class="font-bold relic-text-gradient" style="background-image: ${relicInfo.color};">${relicInfo.name}</span>
+                            <span class="text-gray-400">x${data.count}</span>
+                            ${genesisTag}
+                        </div>
+                    `;
+                }).join('');
+            }
+
+
+            // --- WALLET CONNECTION (SIMULATED) ---
+            async function connectWallet() {
+                // In a real app, this is where you'd use ethers.js or web3.js
+                // to connect to MetaMask and query the NFT contract.
+                
+                walletStatus.textContent = 'Connecting...';
+                connectWalletBtn.disabled = true;
+
+                // Simulate a network delay
+                await new Promise(resolve => setTimeout(resolve, 1500));
+
+                // --- MOCK DATA ---
+                // This simulates finding some NFTs in the user's wallet.
+                // This example shows a wallet with 3 relics and no Genesis trait.
+                userWalletState = {
+                    connected: true,
+                    relics: [
+                        { id: 'rare', hasGenesis: false },
+                        { id: 'common', hasGenesis: false },
+                        { id: 'common', hasGenesis: false },
+                    ]
+                };
+                
+                // Example of empty wallet
+                // userWalletState = { connected: true, relics: [] };
+                
+                connectWalletBtn.textContent = 'Wallet Connected';
+                connectWalletBtn.style.backgroundColor = '#22c55e'; // Green
+                
+                // Update UI and recalculate
+                updateRelicsDisplay();
+                calculate();
+            }
+
+            // --- START THE APP ---
+            initialize();
+        });
+    </script>
+
+</body>
+</html>
+
+
+
