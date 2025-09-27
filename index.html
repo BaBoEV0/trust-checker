@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Intuition $TRUST Checker</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Ethers.js is still needed for connecting to the wallet (MetaMask) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;800&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
@@ -102,9 +104,15 @@
             text-transform: uppercase;
         }
 
-        .btn:hover {
+        .btn:hover:not(:disabled) {
             box-shadow: 0 0 15px var(--primary-glow);
             transform: translateY(-2px);
+        }
+        
+        .btn:disabled {
+            background-color: #555;
+            cursor: not-allowed;
+            opacity: 0.7;
         }
 
         .checkbox-label {
@@ -181,7 +189,7 @@
                 <div class="custom-frame p-4 space-y-3">
                     <div>
                         <label for="evmAddress" class="block text-sm font-medium mb-1">EVM Address</label>
-                        <input type="text" id="evmAddress" class="w-full p-2 rounded-md" placeholder="0x...">
+                        <input type="text" id="evmAddress" class="w-full p-2 rounded-md" placeholder="Connect wallet to populate" readonly>
                     </div>
                     <div>
                         <label for="baseIQ" class="block text-sm font-medium mb-1">Base IQ Points</label>
@@ -248,6 +256,11 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            // --- IMPORTANT: PASTE YOUR ALCHEMY KEY AND CONTRACT ADDRESS HERE ---
+            const ALCHEMY_API_KEY = "KAmlgEfTw7ZS_AQEJyYnB";
+            const CONTRACT_ADDRESS = "0x7aB2F10CaC6E27971fa93A5D5470Bb84126Bb734";
+            const ALCHEMY_URL = `https://eth-mainnet.g.alchemy.com/nft/v2/${ALCHEMY_API_KEY}/getNFTs`;
+
             // --- DATA DEFINITIONS ---
             const roles = {
                 initiate: { name: 'Initiate', multiplier: 1, color: 'var(--role-initiate)' },
@@ -274,6 +287,7 @@
             // --- STATE MANAGEMENT ---
             let userWalletState = {
                 connected: false,
+                address: '',
                 relics: [], // e.g., [{id: 'common', hasGenesis: false}, {id: 'ancient', hasGenesis: true}]
             };
 
@@ -288,62 +302,49 @@
             const roleDisplay = document.getElementById('role-display');
             const roleNameDisplay = document.getElementById('role-name');
             const walletStatus = document.getElementById('wallet-status');
+            const evmAddressInput = document.getElementById('evmAddress');
 
 
             // --- INITIALIZATION ---
             function initialize() {
-                // Populate roles dropdown
                 const roleOptions = Object.entries(roles).reverse().map(([key, value]) => {
                     return `<option value="${key}">${value.name} (x${value.multiplier})</option>`;
                 });
                 roleSelect.innerHTML = roleOptions.join('');
 
-                // Set up event listeners
                 [baseIQInput, roleSelect, flamebearerCheckbox].forEach(el => {
                     el.addEventListener('input', calculate);
                 });
                 connectWalletBtn.addEventListener('click', connectWallet);
                 
-                // Initial calculation and UI update
                 updateRoleDisplay();
                 calculate();
             }
 
             // --- CORE CALCULATION LOGIC ---
             function calculate() {
-                // 1. Get Base IQ
                 const baseIQ = parseFloat(baseIQInput.value) || 0;
-
-                // 2. Get Role Multiplier (RM)
                 const selectedRole = roles[roleSelect.value];
                 const roleMultiplier = selectedRole ? selectedRole.multiplier : 1;
-
-                // 3. Get Flamebearer Multiplier (FM)
                 const flamebearerMultiplier = flamebearerCheckbox.checked ? 1.5 : 1;
 
-                // 4. Get Relics Multiplier (RcsM) & Genesis Multiplier (GM)
                 let relicsMultiplier = 1;
                 let genesisMultiplier = 1;
 
                 if (userWalletState.connected && userWalletState.relics.length > 0) {
                     const heldRelics = userWalletState.relics.map(r => relics[r.id]);
-                    
                     const maxRarityMultiplier = Math.max(...heldRelics.map(r => r.rarityMultiplier));
                     const sumOfWeights = heldRelics.reduce((sum, r) => sum + r.weight, 0);
-                    
                     relicsMultiplier = maxRarityMultiplier * sumOfWeights;
                     
-                    const hasGenesis = userWalletState.relics.some(r => r.hasGenesis);
-                    if (hasGenesis) {
+                    if (userWalletState.relics.some(r => r.hasGenesis)) {
                         genesisMultiplier = 1.66;
                     }
                 }
                 
-                // Final Calculation
                 const totalIQ = baseIQ * roleMultiplier * flamebearerMultiplier * relicsMultiplier * genesisMultiplier;
                 const trustAllocation = totalIQ / 100;
 
-                // Update UI
                 totalIqDisplay.textContent = totalIQ.toLocaleString('en-US', { maximumFractionDigits: 0 });
                 trustAllocationDisplay.textContent = trustAllocation.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                 updateRoleDisplay();
@@ -375,7 +376,6 @@
                 
                 walletStatus.textContent = `${userWalletState.relics.length} Relic(s) found.`;
                 
-                // Group relics by rarity and count them
                 const relicSummary = userWalletState.relics.reduce((acc, relic) => {
                     if (!acc[relic.id]) {
                         acc[relic.id] = { count: 0, hasGenesis: false };
@@ -388,7 +388,11 @@
                 }, {});
 
                 relicsDisplay.innerHTML = Object.entries(relicSummary).map(([id, data]) => {
-                    const relicInfo = relics[id];
+                    const relicInfo = relics[id.toLowerCase()]; // Ensure lowercase matching
+                    if (!relicInfo) {
+                        console.warn(`Unknown rarity found: ${id}`);
+                        return ''; // Skip if rarity not found in our config
+                    }
                     const genesisTag = data.hasGenesis ? `<span style="color: var(--primary-glow); font-weight: bold;"> (Genesis)</span>` : '';
                     return `
                         <div class="p-1 rounded text-sm">
@@ -401,38 +405,70 @@
             }
 
 
-            // --- WALLET CONNECTION (SIMULATED) ---
+            // --- ALCHEMY WALLET CONNECTION ---
             async function connectWallet() {
-                // In a real app, this is where you'd use ethers.js or web3.js
-                // to connect to MetaMask and query the NFT contract.
-                
-                walletStatus.textContent = 'Connecting...';
+                if (typeof window.ethereum === 'undefined') {
+                    walletStatus.textContent = 'Please install MetaMask!';
+                    return;
+                }
+                if (!ALCHEMY_API_KEY || ALCHEMY_API_KEY === "PASTE_YOUR_ALCHEMY_API_KEY_HERE") {
+                    walletStatus.textContent = 'Alchemy API Key is not set!';
+                    return;
+                }
+
                 connectWalletBtn.disabled = true;
+                walletStatus.textContent = 'Connecting...';
 
-                // Simulate a network delay
-                await new Promise(resolve => setTimeout(resolve, 1500));
+                try {
+                    // 1. Connect to wallet using ethers
+                    const provider = new ethers.providers.Web3Provider(window.ethereum);
+                    await provider.send("eth_requestAccounts", []);
+                    const signer = provider.getSigner();
+                    const signerAddress = await signer.getAddress();
 
-                // --- MOCK DATA ---
-                // This simulates finding some NFTs in the user's wallet.
-                // This example shows a wallet with 3 relics and no Genesis trait.
-                userWalletState = {
-                    connected: true,
-                    relics: [
-                        { id: 'rare', hasGenesis: false },
-                        { id: 'common', hasGenesis: false },
-                        { id: 'common', hasGenesis: false },
-                    ]
-                };
-                
-                // Example of empty wallet
-                // userWalletState = { connected: true, relics: [] };
-                
-                connectWalletBtn.textContent = 'Wallet Connected';
-                connectWalletBtn.style.backgroundColor = '#22c55e'; // Green
-                
-                // Update UI and recalculate
-                updateRelicsDisplay();
-                calculate();
+                    userWalletState.address = signerAddress;
+                    userWalletState.connected = true;
+                    evmAddressInput.value = signerAddress;
+                    walletStatus.textContent = `Connected: ${signerAddress.substring(0,6)}...${signerAddress.substring(38)}`;
+
+                    // 2. Fetch NFTs from Alchemy
+                    walletStatus.textContent = 'Fetching your Relics via Alchemy...';
+                    const fetchURL = `${ALCHEMY_URL}?owner=${signerAddress}&contractAddresses[]=${CONTRACT_ADDRESS}`;
+                    
+                    const response = await fetch(fetchURL);
+                    if (!response.ok) {
+                        throw new Error(`Alchemy API request failed: ${response.statusText}`);
+                    }
+                    const data = await response.json();
+
+                    // 3. Parse metadata and update state
+                    if (!data.ownedNfts || data.ownedNfts.length === 0) {
+                        userWalletState.relics = [];
+                    } else {
+                        userWalletState.relics = data.ownedNfts.map(nft => {
+                            const attributes = nft.metadata.attributes || [];
+                            const rarityTrait = attributes.find(attr => attr.trait_type === "Rarity");
+                            const genesisTrait = attributes.find(attr => attr.trait_type === "Genesis");
+
+                            const rarity = rarityTrait ? rarityTrait.value.toLowerCase() : 'common';
+                            const hasGenesis = genesisTrait ? genesisTrait.value === "Yes" : false;
+                            
+                            return { id: rarity, hasGenesis };
+                        });
+                    }
+                    
+                    connectWalletBtn.textContent = 'Wallet Connected';
+                    connectWalletBtn.style.backgroundColor = '#22c55e'; // Green
+                    
+                    updateRelicsDisplay();
+                    calculate();
+
+                } catch (error) {
+                    console.error("Error connecting wallet or fetching NFTs:", error);
+                    walletStatus.textContent = 'Error. Check console for details.';
+                    connectWalletBtn.disabled = false;
+                    userWalletState.connected = false;
+                }
             }
 
             // --- START THE APP ---
@@ -442,6 +478,8 @@
 
 </body>
 </html>
+```
 
 
+    
 
